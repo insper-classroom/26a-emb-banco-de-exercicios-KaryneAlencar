@@ -83,11 +83,10 @@ int main() {
     gpio_set_irq_enabled(BTN_PIN_Y, GPIO_IRQ_EDGE_FALL, true);
 
     // 0 = verde, 1 = amarelo, 2 = vermelho
-    char sequencia[] = {1,0,2,1,0,1,2,1,0,1};
-    int pontos = 0;
+    const char sequencia[] = {1,0,2,1,0,1,2,1,0,1};
     while (true) {
         if(inicia){
-            pontos = 0;
+            int pontos = 0;
             for(int nivel = 1; nivel<=10; nivel++){ //nivel
                 for(int i=0; i < nivel; i++){
                     acender_led(sequencia[i]);
