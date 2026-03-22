@@ -92,16 +92,16 @@ int main() {
             led_estado_g = !led_estado_g;
             gpio_put(LED_PIN_G, led_estado_g);
         }
-        //if(alarme_g){
-          //  alarme_g = false;
-            //gpio_put(LED_PIN_G, 0);
-            //cancel_repeating_timer(&time_g);
-            //if(pisca_y){
-              //  pisca_y = false;
-                //gpio_put(LED_PIN_Y,0);
-                //cancel_repeating_timer(&time_y);
-            //}
-        //}
+        if(alarme_g){
+            alarme_g = false;
+            gpio_put(LED_PIN_G, 0);
+            cancel_repeating_timer(&time_g);
+            if(pisca_y){
+                pisca_y = false;
+                gpio_put(LED_PIN_Y,0);
+                cancel_repeating_timer(&time_y);
+            }
+        }
 
         if(btn_y_press){
             btn_y_press = false;
@@ -113,23 +113,15 @@ int main() {
             led_estado_y = !led_estado_y;
             gpio_put(LED_PIN_Y, led_estado_y);
         }
-        //if(alarme_y){
-          //  alarme_y = false;
-           // gpio_put(LED_PIN_Y, 0);
-            //cancel_repeating_timer(&time_y);
-            //if(pisca_g){
-              //  pisca_g = false;
-                //gpio_put(LED_PIN_G,0);
-                //cancel_repeating_timer(&time_g);
-            //}
-        //}
-        if(alarme_g || alarme_y){
-            alarme_g = false;
+        if(alarme_y){
             alarme_y = false;
-            gpio_put(LED_PIN_G, 0);
-            cancel_repeating_timer(&time_g);
             gpio_put(LED_PIN_Y, 0);
             cancel_repeating_timer(&time_y);
+            if(pisca_g){
+                pisca_g = false;
+                gpio_put(LED_PIN_G,0);
+                cancel_repeating_timer(&time_g);
+            }
         }
 
     }
