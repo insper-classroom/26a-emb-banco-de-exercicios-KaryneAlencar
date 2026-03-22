@@ -88,6 +88,7 @@ int main() {
         if(btn_g_press && !rodando_g){
             btn_g_press = false;
             rodando_g = true;
+            gpio_put(LED_PIN_G, 1);
             add_alarm_in_ms(1000, alarm_g_callback, NULL, false);
             add_repeating_timer_ms(200, timer_g_callback, NULL, &time_g);
         }
@@ -111,6 +112,7 @@ int main() {
         if(btn_y_press && !rodando_y){
             rodando_y = true;
             btn_y_press = false;
+            gpio_put(LED_PIN_Y, 1);
             add_alarm_in_ms(2000, alarm_y_callback, NULL, false);
             add_repeating_timer_ms(500, timer_y_callback, NULL, &time_y);
         }
