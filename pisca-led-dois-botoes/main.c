@@ -87,7 +87,7 @@ int main() {
     while (1) {
         if(btn_g_press){
             btn_g_press = false;
-            rodando_g = true
+            rodando_g = true;
             add_alarm_in_ms(1000, alarm_g_callback, NULL, false);
             add_repeating_timer_ms(200, timer_g_callback, NULL, &time_g);
         }
