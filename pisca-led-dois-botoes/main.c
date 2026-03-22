@@ -10,45 +10,44 @@ const int BTN_PIN_Y = 26;
 
 const int LED_PIN_G = 5;
 const int LED_PIN_Y = 9;
-const int LED_PIN_R = 13;
 
-volatile int btn_f = 0;
-volatile int g_timer_g = 0;
-volatile int g_timer_y = 0;
-volatile int g_timer_r = 0;
-volatile int g_fired_g = 0;
-volatile int g_fired_y = 0;
+volatile bool btn_g_press = false;
+volatile bool btn_y_press = false;
+volatile bool pisca_y = false;
+volatile bool pisca_g = false;
+volatile bool alarme_g = false;
+volatile bool alarme_y = false;
 
 
 void btn_callback(uint gpio, uint32_t events) {
-    if (events == 0x4) {  // fall edge
-        btn_f = gpio;
-    } else if (events == 0x8) {  // rise edge
+    if(events == 0x4){
+        if(gpio == BTN_PIN_G){
+            btn_g_press = true;
+        }
+        if(gpio == BTN_PIN_Y){
+            btn_y_press = true;
+        }
     }
 }
 
-bool timer_g_callback(repeating_timer_t *rt) {
-    g_timer_g = 1;
-    return true;  // keep repeating
-}
-
 bool timer_y_callback(repeating_timer_t *rt) {
-    g_timer_y = 1;
-    return true;  // keep repeating
-}
+    pisca_y = true;
+    return true;
 
-bool timer_r_callback(repeating_timer_t *rt) {
-    g_timer_r = 1;
-    return true;  // keep repeating
+}
+bool timer_g_callback(repeating_timer_t *rt) {
+    pisca_g = true;
+    return true;
 }
 
 int64_t alarm_g_callback(alarm_id_t id, void *user_data) {
-    g_fired_g = 1;
+    alarme_g = true;
     return 0;
+
 }
 
 int64_t alarm_y_callback(alarm_id_t id, void *user_data) {
-    g_fired_y = 1;
+    alarme_y = true;
     return 0;
 }
 
@@ -73,69 +72,64 @@ int main() {
     gpio_init(LED_PIN_Y);
     gpio_set_dir(LED_PIN_Y, GPIO_OUT);
 
-    gpio_init(LED_PIN_R);
-    gpio_set_dir(LED_PIN_R, GPIO_OUT);
+    //volatile alarm_id_t alarm_g;
+    //volatile alarm_id_t alarm_y;
 
-    repeating_timer_t timer_g;
-    if (!add_repeating_timer_ms(100, timer_g_callback, NULL, &timer_g)) {
-        printf("Failed to add timer\n");
-    }
+    repeating_timer_t time_g;
+    repeating_timer_t time_y;
 
-    repeating_timer_t timer_y;
-    if (!add_repeating_timer_ms(200, timer_y_callback, NULL, &timer_y)) {
-        printf("Failed to add timer\n");
-    }
-
-    int led_g = 0;
-    int led_y = 0;
-
-    int alarm_enable_g = 0;
-    int alarm_enable_y = 0;
-
-    alarm_id_t alarm_g = NULL;
-    alarm_id_t alarm_y = NULL;
+    bool led_estado_g = false;
+    bool led_estado_y = false;
 
     while (1) {
-        if (g_timer_g && alarm_enable_g) {
-            led_g = !led_g;
-            gpio_put(LED_PIN_G, led_g);
-            g_timer_g = 0;
-        } else if (alarm_enable_g == 0) {
+        if(btn_g_press){
+            btn_g_press = false;
+            add_alarm_in_ms(1000, alarm_g_callback, NULL, false);
+            add_repeating_timer_ms(200, timer_g_callback, NULL, &time_g);
+        }
+        if(pisca_g){
+            pisca_g = false;
+            led_estado_g = !led_estado_g;
+            gpio_put(LED_PIN_G, led_estado_g);
+        }
+        //if(alarme_g){
+          //  alarme_g = false;
+            //gpio_put(LED_PIN_G, 0);
+            //cancel_repeating_timer(&time_g);
+            //if(pisca_y){
+              //  pisca_y = false;
+                //gpio_put(LED_PIN_Y,0);
+                //cancel_repeating_timer(&time_y);
+            //}
+        //}
+
+        if(btn_y_press){
+            btn_y_press = false;
+            add_alarm_in_ms(2000, alarm_y_callback, NULL, false);
+            add_repeating_timer_ms(500, timer_y_callback, NULL, &time_y);
+        }
+        if(pisca_y){
+            pisca_y = false;
+            led_estado_y = !led_estado_y;
+            gpio_put(LED_PIN_Y, led_estado_y);
+        }
+        //if(alarme_y){
+          //  alarme_y = false;
+           // gpio_put(LED_PIN_Y, 0);
+            //cancel_repeating_timer(&time_y);
+            //if(pisca_g){
+              //  pisca_g = false;
+                //gpio_put(LED_PIN_G,0);
+                //cancel_repeating_timer(&time_g);
+            //}
+        //}
+        if(alarme_g || alarme_y){
+            alarme_g = false;
+            alarme_y = false;
             gpio_put(LED_PIN_G, 0);
-        }
-
-        if (g_timer_y && alarm_enable_y) {
-            led_y = !led_y;
-            gpio_put(LED_PIN_Y, led_y);
-            g_timer_y = 0;
-        } else if (alarm_enable_y == 0) {
+            cancel_repeating_timer(&time_g);
             gpio_put(LED_PIN_Y, 0);
-        }
-
-        if (btn_f == BTN_PIN_G) {
-            if (alarm_enable_g == 0) {
-                alarm_g = add_alarm_in_ms(1000, alarm_g_callback, NULL, false);
-                alarm_enable_g = 1;
-            }
-            btn_f = 0;
-        }
-
-        if (btn_f == BTN_PIN_Y) {
-            if (alarm_enable_y == 0) {
-                alarm_y = add_alarm_in_ms(2000, alarm_y_callback, NULL, false);
-                alarm_enable_y = 1;
-            }
-            btn_f = 0;
-        }
-
-        if (g_fired_g == 1 ||g_fired_y == 1 ) {
-            g_fired_g = 0;
-            alarm_enable_g = 0;
-
-            g_fired_y = 0;
-            alarm_enable_y = 0;
-            cancel_alarm(alarm_y);
-            cancel_alarm(alarm_g);
+            cancel_repeating_timer(&time_y);
         }
 
     }
