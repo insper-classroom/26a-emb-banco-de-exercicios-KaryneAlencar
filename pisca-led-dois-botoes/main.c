@@ -85,7 +85,7 @@ int main() {
     bool rodando_y = false;
 
     while (1) {
-        if(btn_g_press){
+        if(btn_g_press && !rodando_g){
             btn_g_press = false;
             rodando_g = true;
             add_alarm_in_ms(1000, alarm_g_callback, NULL, false);
@@ -100,6 +100,7 @@ int main() {
             alarme_g = false;
             gpio_put(LED_PIN_G, 0);
             cancel_repeating_timer(&time_g);
+            rodando_g = false;
             if(rodando_y){
                 rodando_y = false;
                 gpio_put(LED_PIN_Y,0);
@@ -107,7 +108,7 @@ int main() {
             }
         }
 
-        if(btn_y_press){
+        if(btn_y_press && !rodando_y){
             rodando_y = true;
             btn_y_press = false;
             add_alarm_in_ms(2000, alarm_y_callback, NULL, false);
@@ -122,6 +123,7 @@ int main() {
             alarme_y = false;
             gpio_put(LED_PIN_Y, 0);
             cancel_repeating_timer(&time_y);
+            rodando_y = false;
             if(rodando_g){
                 rodando_g = false;
                 gpio_put(LED_PIN_G,0);
