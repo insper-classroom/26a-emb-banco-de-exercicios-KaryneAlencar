@@ -1,98 +1,94 @@
 #include "pico/stdlib.h"
-#include <stdio.h>
 #include "hardware/gpio.h"
 
-// Pinos
+// Definições de Pinos
 const int LED_PIN_R = 2;
 const int LED_PIN_G = 9;
 const int LED_PIN_P = 26;
 
-const int BTN_PINS[] = {21, 27, 28, 17}; // Y, B, G, W
-const int BTN_COUNT = 4;
+const int BTN_Y = 21;
+const int BTN_B = 27;
+const int BTN_G = 28;
+const int BTN_W = 17;
 
-// Flags de interrupção
-volatile int pino_pressionado = -1;
+// Variável volátil para comunicação entre ISR e Main
+// -1: Nenhum botão pressionado | 0-3: Índice do botão
+volatile int botao_detectado = -1;
 
+// ISR Ultra-rápida: Sem loops, sem delays, sem printf
 void btn_callback(uint gpio, uint32_t events) {
-    // Identifica qual botão foi pressionado
-    for (int i = 0; i < BTN_COUNT; i++) {
-        if (gpio == BTN_PINS[i]) {
-            pino_pressionado = i;
-            break;
-        }
-    }
+    if (gpio == BTN_Y) botao_detectado = 0;
+    else if (gpio == BTN_B) botao_detectado = 1;
+    else if (gpio == BTN_G) botao_detectado = 2;
+    else if (gpio == BTN_W) botao_detectado = 3;
 }
 
-void pisca_roxo() {
+// Função auxiliar para o LED roxo (fora da ISR)
+void sinalizar_pressao() {
     gpio_put(LED_PIN_P, 1);
-    sleep_ms(100); // Feedback rápido para o usuário
+    sleep_ms(100); 
     gpio_put(LED_PIN_P, 0);
 }
 
 int main() {
-    stdio_init_all();
-
-    // Setup LEDs
+    // Inicialização de LEDs
     int leds[] = {LED_PIN_R, LED_PIN_G, LED_PIN_P};
-    for(int i=0; i<3; i++) {
+    for(int i = 0; i < 3; i++) {
         gpio_init(leds[i]);
         gpio_set_dir(leds[i], GPIO_OUT);
-        gpio_put(leds[i], 0);
     }
 
-    // Setup Botões com Interrupção
-    for (int i = 0; i < BTN_COUNT; i++) {
-        gpio_init(BTN_PINS[i]);
-        gpio_set_dir(BTN_PINS[i], GPIO_IN);
-        gpio_pull_up(BTN_PINS[i]);
-        // O callback é compartilhado por todos os pinos
-        gpio_set_irq_enabled_with_callback(BTN_PINS[i], GPIO_IRQ_EDGE_FALL, true, &btn_callback);
+    // Configuração de Botões e Interrupções
+    int botoes[] = {BTN_Y, BTN_B, BTN_G, BTN_W};
+    for(int i = 0; i < 4; i++) {
+        gpio_init(botoes[i]);
+        gpio_set_dir(botoes[i], GPIO_IN);
+        gpio_pull_up(botoes[i]);
+        // Registra o callback apenas uma vez, habilita para os outros
+        if (i == 0) gpio_set_irq_enabled_with_callback(botoes[i], GPIO_IRQ_EDGE_FALL, true, &btn_callback);
+        else gpio_set_irq_enabled(botoes[i], GPIO_IRQ_EDGE_FALL, true);
     }
 
-    int senha_definida[4];
-    int senha_testada[4];
+    int senha_mestra[4];
+    int tentativa[4];
 
-    // 1. Fase de Configuração (Acontece uma vez ao ligar)
+    // FASE 1: Gravar Senha
     for (int i = 0; i < 4; i++) {
-        while (pino_pressionado == -1) { tight_loop_contents(); }
+        while (botao_detectado == -1) { tight_loop_contents(); }
         
-        senha_definida[i] = pino_pressionado;
-        pisca_roxo();
-        pino_pressionado = -1; // Reset flag
+        senha_mestra[i] = botao_detectado;
+        botao_detectado = -1; // Limpa para a próxima leitura
+        sinalizar_pressao();
     }
-    
-    // LED Verde 300ms indicando que a senha foi salva
+
+    // LED Verde 300ms: Senha configurada
     gpio_put(LED_PIN_G, 1);
     sleep_ms(300);
     gpio_put(LED_PIN_G, 0);
 
-    // 2. Loop de Verificação
+    // FASE 2: Loop de Verificação
     while (1) {
         for (int i = 0; i < 4; i++) {
-            while (pino_pressionado == -1) { tight_loop_contents(); }
+            while (botao_detectado == -1) { tight_loop_contents(); }
             
-            senha_testada[i] = pino_pressionado;
-            pisca_roxo();
-            pino_pressionado = -1;
+            tentativa[i] = botao_detectado;
+            botao_detectado = -1;
+            sinalizar_pressao();
         }
 
-        // Verifica senha
-        bool correta = true;
+        // Validação
+        bool acertou = true;
         for (int i = 0; i < 4; i++) {
-            if (senha_testada[i] != senha_definida[i]) {
-                correta = false;
+            if (tentativa[i] != senha_mestra[i]) {
+                acertou = false;
                 break;
             }
         }
 
-        if (correta) {
-            gpio_put(LED_PIN_G, 1);
-            sleep_ms(300);
-            gpio_put(LED_PIN_G, 0);
-        } else {
-            gpio_put(LED_PIN_R, 1);
-            sleep_ms(300);
-            gpio_put(LED_PIN_R, 0);
-        }
+        // Feedback visual (300ms conforme requisito)
+        int led_resultado = acertou ? LED_PIN_G : LED_PIN_R;
+        gpio_put(led_resultado, 1);
+        sleep_ms(300);
+        gpio_put(led_resultado, 0);
     }
 }
