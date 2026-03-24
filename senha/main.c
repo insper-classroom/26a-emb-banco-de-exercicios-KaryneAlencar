@@ -2,178 +2,97 @@
 #include <stdio.h>
 #include "hardware/gpio.h"
 
+// Pinos
 const int LED_PIN_R = 2;
 const int LED_PIN_G = 9;
 const int LED_PIN_P = 26;
 
-const int BTN_PIN_Y = 21;
-const int BTN_PIN_B = 27;
-const int BTN_PIN_G = 28;
-const int BTN_PIN_W = 17;
+const int BTN_PINS[] = {21, 27, 28, 17}; // Y, B, G, W
+const int BTN_COUNT = 4;
 
-volatile bool btn_b_press = false;
-volatile bool btn_y_press = false;
-volatile bool btn_g_press = false;
-volatile bool btn_w_press = false;
+// Flags de interrupção
+volatile int pino_pressionado = -1;
 
 void btn_callback(uint gpio, uint32_t events) {
-    if(events == 0x4){
-        if(gpio == BTN_PIN_B){
-            btn_b_press = true;
+    // Identifica qual botão foi pressionado
+    for (int i = 0; i < BTN_COUNT; i++) {
+        if (gpio == BTN_PINS[i]) {
+            pino_pressionado = i;
+            break;
         }
-        if(gpio == BTN_PIN_Y){
-            btn_y_press = true;
-        }  
-        if(gpio == BTN_PIN_W){
-            btn_w_press = true;
-        } 
-        if(gpio == BTN_PIN_G){
-            btn_g_press = true;
-        } 
     }
 }
 
+void pisca_roxo() {
+    gpio_put(LED_PIN_P, 1);
+    sleep_ms(100); // Feedback rápido para o usuário
+    gpio_put(LED_PIN_P, 0);
+}
 
 int main() {
     stdio_init_all();
-    gpio_init(LED_PIN_R);
-    gpio_set_dir(LED_PIN_R, GPIO_OUT);
-    gpio_put(LED_PIN_R, 0);
 
-    gpio_init(LED_PIN_P);
-    gpio_set_dir(LED_PIN_P, GPIO_OUT);
-    gpio_put(LED_PIN_P, 0);
+    // Setup LEDs
+    int leds[] = {LED_PIN_R, LED_PIN_G, LED_PIN_P};
+    for(int i=0; i<3; i++) {
+        gpio_init(leds[i]);
+        gpio_set_dir(leds[i], GPIO_OUT);
+        gpio_put(leds[i], 0);
+    }
 
-    gpio_init(LED_PIN_G);
-    gpio_set_dir(LED_PIN_G, GPIO_OUT);
-    gpio_put(LED_PIN_G, 0);
-    
-    gpio_init(BTN_PIN_Y);
-    gpio_set_dir(BTN_PIN_Y, GPIO_IN);
-    gpio_pull_up(BTN_PIN_Y);
-    gpio_set_irq_enabled_with_callback(BTN_PIN_Y, GPIO_IRQ_EDGE_FALL, true, &btn_callback);
-
-    gpio_init(BTN_PIN_B);
-    gpio_set_dir(BTN_PIN_B, GPIO_IN);
-    gpio_pull_up(BTN_PIN_B);
-    gpio_set_irq_enabled(BTN_PIN_B, GPIO_IRQ_EDGE_FALL, true);
-
-    gpio_init(BTN_PIN_G);
-    gpio_set_dir(BTN_PIN_G, GPIO_IN);
-    gpio_pull_up(BTN_PIN_G);
-    gpio_set_irq_enabled(BTN_PIN_G, GPIO_IRQ_EDGE_FALL, true);
-
-    gpio_init(BTN_PIN_W);
-    gpio_set_dir(BTN_PIN_W, GPIO_IN);
-    gpio_pull_up(BTN_PIN_W);
-    gpio_set_irq_enabled(BTN_PIN_W, GPIO_IRQ_EDGE_FALL, true);
-
-    //recebe uma senha - atribuir cada cor a um número
-//se o tamanho passar de 4, usuário ja deve por a senha
-//led roxo sempre acende
-//led vere acende se acertar(300ms)
-//led vermelho se errar(300ms)
+    // Setup Botões com Interrupção
+    for (int i = 0; i < BTN_COUNT; i++) {
+        gpio_init(BTN_PINS[i]);
+        gpio_set_dir(BTN_PINS[i], GPIO_IN);
+        gpio_pull_up(BTN_PINS[i]);
+        // O callback é compartilhado por todos os pinos
+        gpio_set_irq_enabled_with_callback(BTN_PINS[i], GPIO_IRQ_EDGE_FALL, true, &btn_callback);
+    }
 
     int senha_definida[4];
     int senha_testada[4];
-    bool rodando = false;
-    bool perdeu = false;
 
+    // 1. Fase de Configuração (Acontece uma vez ao ligar)
+    for (int i = 0; i < 4; i++) {
+        while (pino_pressionado == -1) { tight_loop_contents(); }
+        
+        senha_definida[i] = pino_pressionado;
+        pisca_roxo();
+        pino_pressionado = -1; // Reset flag
+    }
+    
+    // LED Verde 300ms indicando que a senha foi salva
+    gpio_put(LED_PIN_G, 1);
+    sleep_ms(300);
+    gpio_put(LED_PIN_G, 0);
+
+    // 2. Loop de Verificação
     while (1) {
-        if(!rodando){
-            rodando = true;
-            for(int i = 0; i < 4; i++){
-                while(!btn_b_press && !btn_g_press && !btn_y_press && !btn_w_press){
-                    tight_loop_contents(); // espera
-                }
-                if(btn_b_press){
-                    gpio_put(LED_PIN_P, 1);
-                    sleep_ms(50);
-                    gpio_put(LED_PIN_P, 0);
-                    btn_b_press = false;
-                    senha_definida[i]=1;
-                }
-                if(btn_g_press){
-                    gpio_put(LED_PIN_P, 1);
-                    sleep_ms(50);
-                    gpio_put(LED_PIN_P, 0);
-                    btn_g_press = false;
-                    senha_definida[i]=0;
-                }
-                if(btn_y_press){
-                    gpio_put(LED_PIN_P, 1);
-                    sleep_ms(50);
-                    gpio_put(LED_PIN_P, 0);
-                    btn_y_press = false;
-                    senha_definida[i]=2;
-                }
-                if(btn_w_press){
-                    gpio_put(LED_PIN_P, 1);
-                    sleep_ms(50);
-                    gpio_put(LED_PIN_P, 0);
-                    btn_w_press = false;
-                    senha_definida[i]=3;
-                }
+        for (int i = 0; i < 4; i++) {
+            while (pino_pressionado == -1) { tight_loop_contents(); }
+            
+            senha_testada[i] = pino_pressionado;
+            pisca_roxo();
+            pino_pressionado = -1;
+        }
+
+        // Verifica senha
+        bool correta = true;
+        for (int i = 0; i < 4; i++) {
+            if (senha_testada[i] != senha_definida[i]) {
+                correta = false;
+                break;
             }
+        }
+
+        if (correta) {
             gpio_put(LED_PIN_G, 1);
-            sleep_ms(50);
+            sleep_ms(300);
             gpio_put(LED_PIN_G, 0);
-        }
-        
-        for(int i = 0; i < 4; i++){
-            while(!btn_b_press && !btn_g_press && !btn_y_press && !btn_w_press){
-                tight_loop_contents(); // espera
-            }
-            if(btn_b_press){
-                gpio_put(LED_PIN_P, 1);
-                sleep_ms(50);
-                gpio_put(LED_PIN_P, 0);
-                btn_b_press = false;
-                senha_testada[i]=1;
-            }
-            if(btn_g_press){
-                gpio_put(LED_PIN_P, 1);
-                sleep_ms(50);
-                gpio_put(LED_PIN_P, 0);
-                btn_g_press = false;
-                senha_testada[i]=0;
-            }
-            if(btn_y_press){
-                gpio_put(LED_PIN_P, 1);
-                sleep_ms(50);
-                gpio_put(LED_PIN_P, 0);
-                btn_y_press = false;
-                senha_testada[i]=2;
-            }
-            if(btn_w_press){
-                gpio_put(LED_PIN_P, 1);
-                sleep_ms(50);
-                gpio_put(LED_PIN_P, 0);
-                btn_w_press = false;
-                senha_testada[i]=3;
-            }
-        }
-
-
-        
-        perdeu = false;
-        for(int i = 0; i < 4; i ++){
-            if(senha_definida[i] != senha_testada[i]){
-                perdeu = true;
-            }    
-        }
-        
-
-        if(perdeu){
+        } else {
             gpio_put(LED_PIN_R, 1);
-            sleep_ms(50);
+            sleep_ms(300);
             gpio_put(LED_PIN_R, 0);
-        } 
-        else{
-            gpio_put(LED_PIN_G, 1);
-            sleep_ms(50);
-            gpio_put(LED_PIN_G, 0);
         }
-
     }
 }
