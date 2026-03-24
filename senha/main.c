@@ -88,35 +88,35 @@ int main() {
                 }
                 if(btn_b_press){
                     gpio_put(LED_PIN_P, 1);
-                    sleep_ms(300);
+                    sleep_ms(50);
                     gpio_put(LED_PIN_P, 0);
                     btn_b_press = false;
                     senha_definida[i]=1;
                 }
                 if(btn_g_press){
                     gpio_put(LED_PIN_P, 1);
-                    sleep_ms(300);
+                    sleep_ms(50);
                     gpio_put(LED_PIN_P, 0);
                     btn_g_press = false;
                     senha_definida[i]=0;
                 }
                 if(btn_y_press){
                     gpio_put(LED_PIN_P, 1);
-                    sleep_ms(300);
+                    sleep_ms(50);
                     gpio_put(LED_PIN_P, 0);
                     btn_y_press = false;
                     senha_definida[i]=2;
                 }
                 if(btn_w_press){
                     gpio_put(LED_PIN_P, 1);
-                    sleep_ms(300);
+                    sleep_ms(50);
                     gpio_put(LED_PIN_P, 0);
                     btn_w_press = false;
                     senha_definida[i]=3;
                 }
             }
             gpio_put(LED_PIN_G, 1);
-            sleep_ms(300);
+            sleep_ms(50);
             gpio_put(LED_PIN_G, 0);
         }
         
@@ -126,28 +126,28 @@ int main() {
             }
             if(btn_b_press){
                 gpio_put(LED_PIN_P, 1);
-                sleep_ms(300);
+                sleep_ms(50);
                 gpio_put(LED_PIN_P, 0);
                 btn_b_press = false;
                 senha_testada[i]=1;
             }
             if(btn_g_press){
                 gpio_put(LED_PIN_P, 1);
-                sleep_ms(300);
+                sleep_ms(50);
                 gpio_put(LED_PIN_P, 0);
                 btn_g_press = false;
                 senha_testada[i]=0;
             }
             if(btn_y_press){
                 gpio_put(LED_PIN_P, 1);
-                sleep_ms(300);
+                sleep_ms(50);
                 gpio_put(LED_PIN_P, 0);
                 btn_y_press = false;
                 senha_testada[i]=2;
             }
             if(btn_w_press){
                 gpio_put(LED_PIN_P, 1);
-                sleep_ms(300);
+                sleep_ms(50);
                 gpio_put(LED_PIN_P, 0);
                 btn_w_press = false;
                 senha_testada[i]=3;
@@ -166,12 +166,12 @@ int main() {
 
         if(perdeu){
             gpio_put(LED_PIN_R, 1);
-            sleep_ms(300);
+            sleep_ms(50);
             gpio_put(LED_PIN_R, 0);
         } 
         else{
             gpio_put(LED_PIN_G, 1);
-            sleep_ms(300);
+            sleep_ms(50);
             gpio_put(LED_PIN_G, 0);
         }
 
